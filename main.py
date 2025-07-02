@@ -25,7 +25,7 @@ class Article:
         """
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=100
             )
@@ -44,7 +44,7 @@ class Article:
         """
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096
             )
@@ -75,23 +75,38 @@ class Article:
 
     def generate_image(self):
         try:
+            # Try gpt-image-1 first
             response = self.client.images.generate(
-                model="dall-e-3",
-                prompt=f"Professional news photo related to: {self.topic}. Make it look like a real news image, not cartoonish.",
-                size="1024x1024",
-                quality="standard",
+                model="gpt-image-1",
+                prompt=f"{self.topic}, professional news photo, realistic, 16:9, not cartoonish.",
+                size="1792x1024",
+                quality="high",
                 n=1,
             )
-            return response.data[0].url
-        except Exception:
-            return "https://via.placeholder.com/800x400/cccccc/666666?text=News+Image"
+            image_url = response.data[0].url
+            print("Generated image URL (gpt-image-1):", image_url)
+            return image_url
+        except Exception as e:
+            print("gpt-image-1 error:", e)
+            # Fallback to DALL-E 3
+            try:
+                response = self.client.images.generate(
+                    model="dall-e-3",
+                    prompt=f"{self.topic}, professional news photo, realistic, 16:9, not cartoonish.",
+                    size="1792x1024",
+                    quality="standard",
+                    n=1,
+                )
+                image_url = response.data[0].url
+                print("Generated image URL (dall-e-3):", image_url)
+                return image_url
+            except Exception as e2:
+                print("DALL-E 3 error:", e2)
+                return "https://via.placeholder.com/800x400/cccccc/666666?text=News+Image"
 
     def regenerate(self):
         self.title = self.generate_title()
         self.body = self.generate_body()
-        self.author = self.generate_author()
-        self.news_network = self.generate_news_network()
-        self.release_date = self.generate_release_date()
         self.image_url = self.generate_image()
 
     def regenerate_component(self, component):
@@ -99,11 +114,5 @@ class Article:
             self.title = self.generate_title()
         elif component == "body":
             self.body = self.generate_body()
-        elif component == "author":
-            self.author = self.generate_author()
-        elif component == "network":
-            self.news_network = self.generate_news_network()
         elif component == "image":
             self.image_url = self.generate_image()
-        elif component == "release_date":
-            self.release_date = self.generate_release_date()
